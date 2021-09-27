@@ -435,7 +435,6 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                             'model': model_without_ddp.state_dict(),
                             'updates': ema.updates if ema else None,
                             'optimizer': optimizer.state_dict(),
-                            'wandb_id': loggers.wandb.wandb_run.id if loggers.wandb else None
                         }
             # Save checkpoints
             if (lth_stage == 0) and (epoch == dgPruner.rewind_epoch(epochs)):
