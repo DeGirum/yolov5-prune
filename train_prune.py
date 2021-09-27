@@ -425,7 +425,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 
 
             # Mehrdad: LTH, pruning in the end
-            if (final_epoch):
+            if (epoch + 1 == epochs):
                 dgPruner.prune_n_reset( epoch )
                 dgPruner.dump_sparsity_stat(model, save_dir, lth_save_epoch)
                 dgPruner.apply_mask_to_weight()
@@ -441,7 +441,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             if (lth_stage == 0) and (epoch == dgPruner.rewind_epoch(epochs)):
                 LOGGER.info('save rewind checkpoint\n')
                 dgPruner.save_rewind_checkpoint(checkpoint)
-            if (final_epoch):
+            if (epoch + 1 == epochs):
                 LOGGER.info('save final checkpoint\n')
                 dgPruner.save_final_checkpoint(checkpoint)
             #
