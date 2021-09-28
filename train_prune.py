@@ -281,7 +281,10 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             checkpoint = dgPruner.rewind_masked_checkpoint('model', 'model')
             if ema:
                 checkpoint = dgPruner.rewind_masked_checkpoint('ema', 'model')
-            de_parallel(model).load_state_dict(checkpoint['model'])
+
+            # loading model 
+            de_parallel(model).load_state_dict(checkpoint['model'], strict=False)  # load
+            # loading optimizer 
             optimizer.load_state_dict(checkpoint['optimizer'])
             start_epoch = checkpoint['epoch'] + 1
             best_fitness = 0.0
@@ -291,6 +294,19 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                 ema.ema.load_state_dict(checkpoint['ema'])
                 ema.updates = checkpoint['updates']
                 dgPruner.dump_sparsity_stat(ema.ema, save_dir, lth_stage * 100000)
+
+            _, _, _ = val.run(data_dict,
+                                batch_size=batch_size // WORLD_SIZE * 2,
+                                imgsz=imgsz,
+                                model=ema.ema if ema else de_parallel(model),
+                                single_cls=single_cls,
+                                dataloader=val_loader,
+                                save_dir=save_dir,
+                                save_json=False,
+                                verbose=False,
+                                plots=False,
+                                callbacks=callbacks,
+                                compute_loss=compute_loss)
     #
         for epoch in range(start_epoch, epochs):  # epoch ------------------------------------------------------------------
             lth_save_epoch = lth_save_epoch + 1
@@ -374,13 +390,14 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             if RANK in [-1, 0]:
                 # mAP
                 callbacks.run('on_train_epoch_end', epoch=lth_save_epoch)
-                ema.update_attr(model, include=['yaml', 'nc', 'hyp', 'names', 'stride', 'class_weights'])
+                if ema:
+                    ema.update_attr(model, include=['yaml', 'nc', 'hyp', 'names', 'stride', 'class_weights'])
                 final_epoch = (epoch + 1 == epochs) or stopper.possible_stop
                 if not noval or final_epoch:  # Calculate mAP
                     results, maps, _ = val.run(data_dict,
                                             batch_size=batch_size // WORLD_SIZE * 2,
                                             imgsz=imgsz,
-                                            model=ema.ema,
+                                            model=ema.ema if ema else de_parallel(model),
                                             single_cls=single_cls,
                                             dataloader=val_loader,
                                             save_dir=save_dir,
