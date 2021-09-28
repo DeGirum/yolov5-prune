@@ -419,8 +419,8 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                     ckpt = {'epoch': epoch,
                             'best_fitness': best_fitness,
                             'model': deepcopy(de_parallel(model)).half(),
-                            'ema': deepcopy( dgPruner.strip_prunable_modules(ema.ema) ).half(),
-                            'updates': ema.updates,
+                            'ema': deepcopy( dgPruner.strip_prunable_modules(ema.ema) ).half() if ema else None,
+                            'updates': ema.updates if ema else None,
                             'optimizer': optimizer.state_dict(),
                             'wandb_id': loggers.wandb.wandb_run.id if loggers.wandb else None}
 
