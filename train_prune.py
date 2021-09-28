@@ -202,7 +202,6 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     nl = model.model[-1].nl  # number of detection layers (used for scaling hyp['obj'])
     imgsz = check_img_size(opt.imgsz, gs, floor=gs * 2)  # verify imgsz is gs-multiple
 
-    model_without_ddp = model
     # DP mode
     if cuda and RANK == -1 and torch.cuda.device_count() > 1:
         logging.warning('DP not recommended, instead use torch.distributed.run for best DDP Multi-GPU results.\n'
@@ -248,7 +247,6 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     # DDP mode
     if cuda and RANK != -1:
         model = DDP(model, device_ids=[LOCAL_RANK], output_device=LOCAL_RANK)
-        model_without_ddp = model.module
 
     # Model parameters
     hyp['box'] *= 3. / nl  # scale to layers
@@ -280,15 +278,18 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     lth_save_epoch = start_epoch - 1
     for lth_stage in range(0, dgPruner.num_stages() + 1):
         if (lth_stage != 0):
-            checkpoint = dgPruner.rewind_masked_checkpoint('model')
-            model_without_ddp.load_state_dict(checkpoint['model'])
+            checkpoint = dgPruner.rewind_masked_checkpoint('model', 'model')
+            if ema:
+                checkpoint = dgPruner.rewind_masked_checkpoint('ema', 'model')
+            de_parallel(model).load_state_dict(checkpoint['model'])
             optimizer.load_state_dict(checkpoint['optimizer'])
             start_epoch = checkpoint['epoch'] + 1
             best_fitness = 0.0
-            dgPruner.dump_sparsity_stat(model_without_ddp, save_dir, lth_stage * 10000)
+            dgPruner.dump_sparsity_stat(de_parallel(model), save_dir, lth_stage * 10000)
             # model ema 
             if ema:
-                ema.set_model(model, checkpoint['updates'])
+                ema.ema.load_state_dict(checkpoint['ema'])
+                ema.updates = checkpoint['updates']
                 dgPruner.dump_sparsity_stat(ema.ema, save_dir, lth_stage * 100000)
     #
         for epoch in range(start_epoch, epochs):  # epoch ------------------------------------------------------------------
@@ -432,10 +433,12 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 
             checkpoint = {  'epoch': epoch,
                             'best_fitness': best_fitness,
-                            'model': model_without_ddp.state_dict(),
+                            'model': de_parallel(model).state_dict(),
+                            'ema': ema.ema.state_dict() if ema else None,
                             'updates': ema.updates if ema else None,
-                            'optimizer': optimizer.state_dict(),
+                            'optimizer': optimizer.state_dict()
                         }
+
             # Save checkpoints
             if (lth_stage == 0) and (epoch == dgPruner.rewind_epoch(epochs)):
                 LOGGER.info('save rewind checkpoint\n')
