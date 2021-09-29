@@ -172,8 +172,10 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     scheduler = lr_scheduler.LambdaLR(optimizer, lr_lambda=lf)  # plot_lr_scheduler(optimizer, scheduler, epochs)
 
     # EMA
-    ema = ModelEMA(model) if RANK in [-1, 0] else None
-
+    ema = None
+    if (opt.ema):
+        ema = ModelEMA(model) if RANK in [-1, 0] else None
+    
     # Resume
     start_epoch, best_fitness = 0, 0.0
     if pretrained:
@@ -538,6 +540,7 @@ def parse_opt(known=False):
     parser.add_argument('--local_rank', type=int, default=-1, help='DDP parameter, do not modify')
     parser.add_argument('--freeze', type=int, default=0, help='Number of layers to freeze. backbone=10, all=24')
     parser.add_argument('--patience', type=int, default=100, help='EarlyStopping patience (epochs without improvement)')
+    parser.add_argument('--ema', action='store_true', help='use ema')
 
     opt = parser.parse_known_args()[0] if known else parser.parse_args()
     return opt
