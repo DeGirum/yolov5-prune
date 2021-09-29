@@ -173,7 +173,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 
     # EMA
     ema = ModelEMA(model) if RANK in [-1, 0] else None
-    ema = None
+
     # Resume
     start_epoch, best_fitness = 0, 0.0
     if pretrained:
