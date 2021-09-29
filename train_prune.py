@@ -297,18 +297,19 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                 ema.updates = checkpoint['updates']
                 dgPruner.dump_sparsity_stat(ema.ema, save_dir, lth_stage * 100000)
 
-            _, _, _ = val.run(data_dict,
-                                batch_size=batch_size // WORLD_SIZE * 2,
-                                imgsz=imgsz,
-                                model=ema.ema if ema else de_parallel(model),
-                                single_cls=single_cls,
-                                dataloader=val_loader,
-                                save_dir=save_dir,
-                                save_json=False,
-                                verbose=False,
-                                plots=False,
-                                callbacks=callbacks,
-                                compute_loss=compute_loss)
+            if RANK in [-1, 0]:
+                _, _, _ = val.run(data_dict,
+                                    batch_size=batch_size // WORLD_SIZE * 2,
+                                    imgsz=imgsz,
+                                    model=ema.ema if ema else de_parallel(model),
+                                    single_cls=single_cls,
+                                    dataloader=val_loader,
+                                    save_dir=save_dir,
+                                    save_json=False,
+                                    verbose=False,
+                                    plots=False,
+                                    callbacks=callbacks,
+                                    compute_loss=compute_loss)
     #
         for epoch in range(start_epoch, epochs):  # epoch ------------------------------------------------------------------
             lth_save_epoch = lth_save_epoch + 1
