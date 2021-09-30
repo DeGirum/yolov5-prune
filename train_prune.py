@@ -420,7 +420,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                 if (not nosave) or (final_epoch and not evolve):  # if save
                     ckpt = {'epoch': epoch,
                             'best_fitness': best_fitness,
-                            'model': deepcopy(de_parallel(model)).half(),
+                            'model': deepcopy( dgPruner.strip_prunable_modules( de_parallel(model) ) ).half(),
                             'ema': deepcopy( dgPruner.strip_prunable_modules(ema.ema) ).half() if ema else None,
                             'updates': ema.updates if ema else None,
                             'optimizer': optimizer.state_dict(),
