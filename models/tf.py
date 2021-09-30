@@ -17,8 +17,10 @@ from copy import deepcopy
 from pathlib import Path
 
 FILE = Path(__file__).resolve()
-ROOT = FILE.parents[1]  # yolov5/ dir
-sys.path.append(ROOT.as_posix())  # add yolov5/ to path
+ROOT = FILE.parents[1]  # YOLOv5 root directory
+if str(ROOT) not in sys.path:
+    sys.path.append(str(ROOT))  # add ROOT to PATH
+# ROOT = ROOT.relative_to(Path.cwd())  # relative
 
 import numpy as np
 import tensorflow as tf
@@ -27,9 +29,9 @@ import torch.nn as nn
 from tensorflow import keras
 
 from models.common import Conv, Bottleneck, SPP, DWConv, Focus, BottleneckCSP, Concat, autopad, C3
-from models.experimental import MixConv2d, CrossConv, attempt_load
+from models.experimental import CrossConv, MixConv2d, attempt_load
 from models.yolo import Detect
-from utils.general import colorstr, make_divisible, set_logging
+from utils.general import make_divisible, print_args, set_logging
 from utils.activations import SiLU
 
 LOGGER = logging.getLogger(__name__)
@@ -366,7 +368,7 @@ class AgnosticNMS(keras.layers.Layer):
     # TF Agnostic NMS
     def call(self, input, topk_all, iou_thres, conf_thres):
         # wrap map_fn to avoid TypeSpec related error https://stackoverflow.com/a/65809989/3036450
-        return tf.map_fn(self._nms, input,
+        return tf.map_fn(lambda x: self._nms(x, topk_all, iou_thres, conf_thres), input,
                          fn_output_signature=(tf.float32, tf.float32, tf.float32, tf.int32),
                          name='agnostic_nms')
 
@@ -434,12 +436,12 @@ def parse_opt():
     parser.add_argument('--dynamic', action='store_true', help='dynamic batch size')
     opt = parser.parse_args()
     opt.imgsz *= 2 if len(opt.imgsz) == 1 else 1  # expand
+    print_args(FILE.stem, opt)
     return opt
 
 
 def main(opt):
     set_logging()
-    print(colorstr('tf.py: ') + ', '.join(f'{k}={v}' for k, v in vars(opt).items()))
     run(**vars(opt))
 
 
