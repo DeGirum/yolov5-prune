@@ -129,7 +129,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     dgPruner = DG_Pruner()
     model = dgPruner.swap_prunable_modules(model)
     dgPruner.dump_sparsity_stat(model, save_dir, 0)
-    pruners = dgPruner.pruners_from_file('DG_Prune/lth_yolov5sm.json')
+    pruners = dgPruner.pruners_from_file('DG_Prune/{}'.format(opt.prune_json))
     hooks = dgPruner.add_custom_pruning(model, MagnitudeImportance)
     #
 
@@ -291,6 +291,8 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             de_parallel(model).load_state_dict(checkpoint['model'], strict=False)  # load
             # loading optimizer 
             optimizer.load_state_dict(checkpoint['optimizer'])
+            scheduler.load_state_dict(checkpoint['scheduler'])
+            last_opt_step = checkpoint['last_opt_step']
             start_epoch = checkpoint['epoch'] + 1
             best_fitness = 0.0
             dgPruner.dump_sparsity_stat(de_parallel(model), save_dir, lth_stage * 10000)
@@ -455,7 +457,9 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                             'model': de_parallel(model).state_dict(),
                             'ema': ema.ema.state_dict() if ema else None,
                             'updates': ema.updates if ema else None,
-                            'optimizer': optimizer.state_dict()
+                            'optimizer': optimizer.state_dict(),
+                            'scheduler': scheduler.state_dict(),
+                            'last_opt_step': last_opt_step
                         }
 
             # Save checkpoints
@@ -507,6 +511,7 @@ def parse_opt(known=False):
     parser = argparse.ArgumentParser()
     parser.add_argument('--weights', type=str, default=ROOT / 'yolov5s.pt', help='initial weights path')
     parser.add_argument('--cfg', type=str, default='', help='model.yaml path')
+    parser.add_argument('--prune-json', type=str, default='lth_yolov5m.json', help='prune.json path')
     parser.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml', help='dataset.yaml path')
     parser.add_argument('--hyp', type=str, default=ROOT / 'data/hyps/hyp.scratch.yaml', help='hyperparameters path')
     parser.add_argument('--epochs', type=int, default=300)
