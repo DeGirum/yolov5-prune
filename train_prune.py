@@ -128,7 +128,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 
     dgPruner = DG_Pruner()
     model = dgPruner.swap_prunable_modules(model)
-    dgPruner.dump_sparsity_stat(model, save_dir, 0)
+    dgPruner.dump_sparsity_stat_mask_base(model, save_dir, 0)
     pruners = dgPruner.pruners_from_file('DG_Prune/{}'.format(opt.prune_json))
     hooks = dgPruner.add_custom_pruning(model, MagnitudeImportance)
     #
@@ -295,12 +295,12 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             last_opt_step = checkpoint['last_opt_step']
             start_epoch = checkpoint['epoch'] + 1
             best_fitness = 0.0
-            dgPruner.dump_sparsity_stat(de_parallel(model), save_dir, lth_stage * 10000)
+            dgPruner.dump_sparsity_stat_mask_base(de_parallel(model), save_dir, lth_stage * 10000)
             # model ema 
             if ema:
                 ema.ema.load_state_dict(checkpoint['ema'])
                 ema.updates = checkpoint['updates']
-                dgPruner.dump_sparsity_stat(ema.ema, save_dir, lth_stage * 100000)
+                dgPruner.dump_sparsity_stat_mask_base(ema.ema, save_dir, lth_stage * 100000)
 
             if RANK in [-1, 0]:
                 _, _, _ = val.run(data_dict,
@@ -449,7 +449,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             # Mehrdad: LTH, pruning in the end
             if (epoch + 1 == epochs):
                 dgPruner.prune_n_reset( epoch )
-                dgPruner.dump_sparsity_stat(model, save_dir, lth_epoch)
+                dgPruner.dump_sparsity_stat_mask_base(model, save_dir, lth_epoch)
                 dgPruner.apply_mask_to_weight()
 
             checkpoint = {  'epoch': epoch,
