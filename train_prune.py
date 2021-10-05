@@ -299,7 +299,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             # model ema 
             if ema:
                 ema.ema.load_state_dict(checkpoint['ema'])
-                ema.updates = checkpoint['updates']
+                ema.updates = 0 # checkpoint['updates']
                 dgPruner.dump_sparsity_stat_mask_base(ema.ema, save_dir, lth_stage * 100000)
 
             if RANK in [-1, 0]:
