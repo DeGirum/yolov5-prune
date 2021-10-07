@@ -14,6 +14,7 @@ from utils.datasets import create_dataloader
 import val  # for end-of-epoch mAP
 from models.experimental import attempt_load
 
+import DG_Prune
 
 LOGGER = logging.getLogger(__name__)
 
@@ -29,7 +30,6 @@ def parse_opt(known=False):
     parser.add_argument('--cfg', type=str, default='', help='model.yaml path')
     parser.add_argument('--data', type=str, default=ROOT / 'data/coco128.yaml', help='dataset.yaml path')
     parser.add_argument('--hyp', type=str, default=ROOT / 'data/hyps/hyp.scratch.yaml', help='hyperparameters path')
-    parser.add_argument('--epochs', type=int, default=300)
     parser.add_argument('--batch-size', type=int, default=16, help='total batch size for all GPUs')
     parser.add_argument('--imgsz', '--img', '--img-size', type=int, default=640, help='train, val image size (pixels)')
     parser.add_argument('--rect', action='store_true', help='rectangular training')
@@ -70,19 +70,25 @@ if __name__ == "__main__":
         ckpt = torch.load(weights, map_location=device)  # load checkpoint
         model = Model(cfg or ckpt['model'].yaml, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
         exclude = ['anchor'] if (cfg or hyp.get('anchors')) else []  # exclude keys
-        csd = ckpt['model'].float().state_dict()  # checkpoint state_dict as FP32
-        # csd = ckpt['ema'].float().state_dict()  # checkpoint state_dict as FP32
+        csd = ckpt['ema' if ckpt['ema']!=None else 'model'].float().state_dict()  # checkpoint state_dict as FP32
         csd = intersect_dicts(csd, model.state_dict(), exclude=exclude)  # intersect
         model.load_state_dict(csd, strict=False)  # load
         LOGGER.info(f'Transferred {len(csd)}/{len(model.state_dict())} items from {weights}')  # report
     else:
         model = Model(cfg, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
 
+
+    DG_Prune.dump_sparsity_stat_weight_base(model, save_dir)
+
 # mAP val    
     # Image sizes
     gs = max(int(model.stride.max()), 32)  # grid size (max stride)
     nl = model.model[-1].nl  # number of detection layers (used for scaling hyp['obj'])
     imgsz = check_img_size(opt.imgsz, gs, floor=gs * 2)  # verify imgsz is gs-multiple 
+
+# 
+    # dummy_input = torch.randn(1, 3, imgsz, imgsz, device='cpu')
+    # torch.onnx.export(model.to('cpu'), dummy_input, "yolov5s_relu.onnx", export_params=True, opset_version=11, do_constant_folding=True)
 
     val_path = data_dict['val']
 
