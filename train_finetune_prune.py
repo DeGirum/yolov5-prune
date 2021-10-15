@@ -313,8 +313,8 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 ####### Pruning stage 
         if ema:
             de_parallel(model).load_state_dict( ema.ema.state_dict() )
-
-        dgPruner.prune_n_reset( lth_epoch )
+        if lth_stage != 0:
+            dgPruner.prune_n_reset( lth_epoch )
         dgPruner.dump_sparsity_stat_mask_base(model, save_dir, lth_epoch)
         dgPruner.apply_mask_to_weight()
         best_fitness = 0.0
@@ -334,6 +334,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 #######
         for epoch in range(start_epoch, epochs):  # epoch ------------------------------------------------------------------
             lth_epoch = lth_epoch + 1
+            dgPruner.reset_growth()
             model.train()
 
             # Update image weights (optional, single-GPU only)
