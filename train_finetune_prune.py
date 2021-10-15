@@ -310,9 +310,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                 }
 
     for lth_stage in range(0, dgPruner.num_stages() + 1):
-####### Pruning stage 
-        if ema:
-            de_parallel(model).load_state_dict( ema.ema.state_dict() )
+####### Pruning stage
         if lth_stage != 0:
             dgPruner.prune_n_reset( lth_epoch )
         dgPruner.dump_sparsity_stat_mask_base(model, save_dir, lth_epoch)
