@@ -325,7 +325,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         dgPruner.dump_sparsity_stat_mask_base(de_parallel(model), save_dir, lth_stage * 10000)
         # model ema 
         if ema:
-            ema.ema.load_state_dict( de_parallel(model).state_dict() )
+            # ema.ema.load_state_dict( de_parallel(model).state_dict() )
             ema.updates = 0 # checkpoint['updates']
             dgPruner.dump_sparsity_stat_mask_base(ema.ema, save_dir, lth_stage * 100000)
 
