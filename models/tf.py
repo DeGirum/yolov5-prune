@@ -290,7 +290,7 @@ def parse_model(d, ch, model, imgsz):  # model_dict, input_channels(3)
         n = max(round(n * gd), 1) if n > 1 else n  # depth gain
         if m in [nn.Conv2d, Conv, Bottleneck, SPP, SPPF, DWConv, MixConv2d, Focus, CrossConv, BottleneckCSP, C3]:
             c1, c2 = ch[f], args[0]
-            c2 = make_divisible(c2 * gw, 8) if c2 != no else c2
+            c2 = make_divisible(c2 * gw, 64) if c2 != no else c2    # Mehrdad: 8 --> 64
 
             args = [c1, c2, *args[1:]]
             if m in [BottleneckCSP, C3]:
