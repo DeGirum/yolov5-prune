@@ -132,6 +132,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     pruners = dgPruner.pruners_from_file('DG_Prune/{}'.format(opt.prune_json))
     hooks = dgPruner.add_custom_pruning(model, RigLImportance)
     model = dgPruner.apply_zero_weight_to_mask(model)
+    model = dgPruner.remove_mask_lt_thr(model)
     dgPruner.dump_sparsity_stat_mask_base(de_parallel(model), save_dir, -1)
     #
 
