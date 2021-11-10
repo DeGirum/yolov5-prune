@@ -71,6 +71,7 @@ class Detect(nn.Module):
                 z.append(y.view(bs, -1, self.no))
 
         return x if self.training else (torch.cat(z, 1), x)
+        # return x # Mehrdad: Onnx
 
     def _make_grid(self, nx=20, ny=20, i=0):
         d = self.anchors[i].device
