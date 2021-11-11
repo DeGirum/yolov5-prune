@@ -281,22 +281,27 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     lth_epoch = start_epoch - 1
     for lth_stage in range(0, dgPruner.num_stages() + 1):
         if (lth_stage != 0):
-            checkpoint = dgPruner.rewind_masked_checkpoint('model', 'model')
+            
+            rewind_checkpoint = dgPruner.rewind_masked_checkpoint('model', 'model')
             if ema:
-                checkpoint = dgPruner.rewind_masked_checkpoint('ema', 'model')
+                rewind_checkpoint = dgPruner.rewind_masked_checkpoint('ema', 'model')
+
+            final_checkpoint = dgPruner.get_final_checkpoint()
+            if ema:
+                final_checkpoint['ema'] = dgPruner.mask_unmasked_checkpoint(final_checkpoint['ema'], final_checkpoint['model'])
 
             # loading model 
-            de_parallel(model).load_state_dict(checkpoint['model'], strict=False)  # load
+            de_parallel(model).load_state_dict(final_checkpoint['model'], strict=False)  # load
             # loading optimizer 
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            scheduler.load_state_dict(checkpoint['scheduler'])
-            last_opt_step = checkpoint['last_opt_step']
-            start_epoch = checkpoint['epoch'] + 1
+            optimizer.load_state_dict(rewind_checkpoint['optimizer'])
+            scheduler.load_state_dict(rewind_checkpoint['scheduler'])
+            last_opt_step = rewind_checkpoint['last_opt_step']
+            start_epoch = rewind_checkpoint['epoch'] + 1
             best_fitness = 0.0
             dgPruner.dump_sparsity_stat_mask_base(de_parallel(model), save_dir, lth_stage * 10000)
             # model ema 
             if ema:
-                ema.ema.load_state_dict(checkpoint['ema'])
+                ema.ema.load_state_dict(final_checkpoint['ema'])
                 ema.updates = 0 # checkpoint['updates']
                 dgPruner.dump_sparsity_stat_mask_base(ema.ema, save_dir, lth_stage * 100000)
                 # valuation after pruning
