@@ -192,6 +192,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
         #     ema.updates = ckpt['updates']
 
         # # Epochs
+        start_epoch = dgPruner.rewind_epoch(epochs)
         # start_epoch = ckpt['epoch'] + 1
         # if resume:
         #     assert start_epoch > 0, f'{weights} training to {epochs} epochs is finished, nothing to resume.'
@@ -310,17 +311,18 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                 ema.ema.load_state_dict(final_checkpoint['ema'])
                 ema.updates = 0 # checkpoint['updates']
                 dgPruner.dump_sparsity_stat_mask_base(ema.ema, save_dir, lth_stage * 100000)
-                # valuation after pruning
-                _, _, _ = val.run(data_dict,
-                                    batch_size=batch_size // WORLD_SIZE * 2,
-                                    imgsz=imgsz,
-                                    model=ema.ema,
-                                    single_cls=single_cls,
-                                    dataloader=val_loader,
-                                    save_dir=save_dir,
-                                    plots=False,
-                                    callbacks=callbacks,
-                                    compute_loss=compute_loss)
+        if ema:
+            # valuation after pruning
+            _, _, _ = val.run(data_dict,
+                                batch_size=batch_size // WORLD_SIZE * 2,
+                                imgsz=imgsz,
+                                model=ema.ema,
+                                single_cls=single_cls,
+                                dataloader=val_loader,
+                                save_dir=save_dir,
+                                plots=False,
+                                callbacks=callbacks,
+                                compute_loss=compute_loss)
     #
         for epoch in range(start_epoch, epochs):  # epoch ------------------------------------------------------------------
             # Mehrdad
