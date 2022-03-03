@@ -62,13 +62,14 @@ if __name__ == "__main__":
     device = select_device(opt.device, batch_size=opt.batch_size)
     data_dict = check_dataset(data)  # check if None
     nc = int(data_dict['nc'])  # number of classes
+    # nc = 36
     # Model
     check_suffix(weights, '.pt')  # check weights
     pretrained = weights.endswith('.pt')
     if pretrained:
         weights = attempt_download(weights)  # download if not found locally
         ckpt = torch.load(weights, map_location=device)  # load checkpoint
-        model = Model(cfg or ckpt['model'].yaml, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
+        model = Model(cfg or ckpt['model'].yaml, ch=12, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
         exclude = ['anchor'] if (cfg or hyp.get('anchors')) else []  # exclude keys
         csd = ckpt['ema' if ckpt['ema']!=None else 'model'].float().state_dict()  # checkpoint state_dict as FP32
         csd = intersect_dicts(csd, model.state_dict(), exclude=exclude)  # intersect
@@ -78,33 +79,15 @@ if __name__ == "__main__":
         model = Model(cfg, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
 
 
-    DG_Prune.dump_sparsity_stat_weight_base(model, save_dir)
+    # DG_Prune.dump_sparsity_stat_weight_base(model, save_dir)
 
 # mAP val    
     # Image sizes
     gs = max(int(model.stride.max()), 32)  # grid size (max stride)
     nl = model.model[-1].nl  # number of detection layers (used for scaling hyp['obj'])
     imgsz = check_img_size(opt.imgsz, gs, floor=gs * 2)  # verify imgsz is gs-multiple 
-
+    imgsz = 256
 # 
-    # dummy_input = torch.randn(1, 3, imgsz, imgsz, device='cpu')
-    # torch.onnx.export(model.to('cpu'), dummy_input, "yolov5s_relu.onnx", export_params=True, opset_version=11, do_constant_folding=True)
-
-    val_path = data_dict['val']
-
-    val_loader = create_dataloader(val_path, imgsz, batch_size, gs, single_cls=False,
-                                    hyp=hyp, cache=opt.cache, rect=False, rank=-1,
-                                    workers=workers, pad=0.5,
-                                    prefix=colorstr('val: '))[0]
-
-    _, _, _ = val.run(  data_dict,
-                        batch_size=batch_size,
-                        imgsz=imgsz,
-                        model=model,        # attempt_load(weights, device).half(),
-                        iou_thres=0.6,      # best pycocotools results at 0.7
-                        single_cls=False,
-                        dataloader=val_loader,
-                        save_dir=save_dir,
-                        save_json=True,
-                        plots=False
-                        )
+    # dummy_input = torch.randn(1, 3, opt.imgsz, opt.imgsz, device='cpu')
+    dummy_input = torch.randn(1, 12, opt.imgsz // 2, opt.imgsz // 2, device='cpu')
+    torch.onnx.export(model.to('cpu'), dummy_input, "plate_yolov5s_relu_2.onnx", export_params=True, opset_version=11, do_constant_folding=True)
