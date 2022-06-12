@@ -23,5 +23,5 @@ names:
 - Winter melon
 - Zucchini
 nc: 23
-train: /home/mehrdad/wa/dataset_51/exported_dataset/Cachengo_fruit/images/train
-val: /home/mehrdad/wa/dataset_51/exported_dataset/Cachengo_fruit/images/validation
+train: /home/mehrdad/wa/dataset_51/exported_dataset/_fruit/images/train
+val: /home/mehrdad/wa/dataset_51/exported_dataset/_fruit/images/validation
