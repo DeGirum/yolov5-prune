@@ -35,5 +35,5 @@ names:
 - Sofa bed
 - Kitchen appliance
 nc: 35
-train: /home/mehrdad/wa/dataset_51/exported_dataset/CachengoAll-3/images/train
-val: /home/mehrdad/wa/dataset_51/exported_dataset/CachengoAll-3/images/validation
+train: /home/mehrdad/wa/dataset_51/exported_dataset/All-3/images/train
+val: /home/mehrdad/wa/dataset_51/exported_dataset/All-3/images/validation

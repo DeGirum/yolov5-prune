@@ -44,5 +44,5 @@ names:
 - Zebra
 - Bear
 nc: 44
-train: /home/mehrdad/wa/dataset_51/exported_dataset/Cachengo_animal/images/train
-val: /home/mehrdad/wa/dataset_51/exported_dataset/Cachengo_animal/images/validation
+train: /home/mehrdad/wa/dataset_51/exported_dataset/_animal/images/train
+val: /home/mehrdad/wa/dataset_51/exported_dataset/_animal/images/validation
