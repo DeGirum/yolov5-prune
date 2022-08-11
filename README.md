@@ -71,8 +71,8 @@ See the [YOLOv5 Docs](https://docs.ultralytics.com) for full documentation on tr
 $ git clone https://github.com/ultralytics/yolov5
 $ cd yolov5
 $ pip install -r requirements.txt
-   
-   python train.py --batch 64 --cfg dg_yolov5s_relu6.yaml --data dataset.yaml --weights "" --epoch 100 --adam --img 512
+```example
+$ python train.py --batch 64 --cfg dg_yolov5s_relu6.yaml --data dataset.yaml --weights "" --epoch 100 --adam --img 512
 ```
 
 </details>
