@@ -11,10 +11,11 @@ from models.yolo import Model
 from pathlib import Path
 from utils.datasets import create_dataloader
 
-import val  # for end-of-epoch mAP
 from models.experimental import attempt_load
 
-import DG_Prune
+import onnx_setting
+
+onnx_setting.export_onnx = True
 
 LOGGER = logging.getLogger(__name__)
 
