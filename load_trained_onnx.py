@@ -48,6 +48,8 @@ if __name__ == "__main__":
     
     opt.save_dir = str(increment_path(Path(opt.project) / opt.name, exist_ok=False, mkdir=True))
 
+    cfg_name = opt.cfg
+    data_name = opt.data
     opt.data, opt.cfg, opt.hyp, opt.weights = \
         check_file(opt.data), check_yaml(opt.cfg), check_yaml(opt.hyp), str(opt.weights)
     assert len(opt.cfg) or len(opt.weights), 'either --cfg or --weights must be specified'
@@ -60,9 +62,14 @@ if __name__ == "__main__":
             hyp = yaml.safe_load(f)  # load hyps dict
     # 
     device = select_device(opt.device, batch_size=opt.batch_size)
-    data_dict = check_dataset(data)  # check if None
+    # data_dict = check_dataset(data)  # check if None
+    # Read yaml (optional)
+    if isinstance(data, (str, Path)):
+        with open(data, errors='ignore') as f:
+            data_dict = yaml.safe_load(f)  # dictionary
+
     nc = int(data_dict['nc'])  # number of classes
-    # nc = 36
+    # nc = 1
     # Model
     check_suffix(weights, '.pt')  # check weights
     pretrained = weights.endswith('.pt')
@@ -78,7 +85,7 @@ if __name__ == "__main__":
     else:
         model = Model(cfg, ch=3, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
 
-
+    model.eval()
     # DG_Prune.dump_sparsity_stat_weight_base(model, save_dir)
 
 # mAP val    
@@ -86,8 +93,11 @@ if __name__ == "__main__":
     gs = max(int(model.stride.max()), 32)  # grid size (max stride)
     nl = model.model[-1].nl  # number of detection layers (used for scaling hyp['obj'])
     imgsz = check_img_size(opt.imgsz, gs, floor=gs * 2)  # verify imgsz is gs-multiple 
-    imgsz = 256
+    # imgsz = 256
 # 
+    import os
     # dummy_input = torch.randn(1, 3, opt.imgsz, opt.imgsz, device='cpu')
     dummy_input = torch.randn(1, 12, opt.imgsz // 2, opt.imgsz // 2, device='cpu')
-    torch.onnx.export(model.to('cpu'), dummy_input, "plate_yolov5s_relu_2.onnx", export_params=True, opset_version=11, do_constant_folding=True)
+    onnx_file_name = "{}_{}_{}.onnx".format(os.path.splitext(data_name)[0], os.path.splitext(cfg_name)[0], opt.imgsz)
+    torch.onnx.export(model.to('cpu'), dummy_input, onnx_file_name, export_params=True, opset_version=11, do_constant_folding=True)
+    print (onnx_file_name)
