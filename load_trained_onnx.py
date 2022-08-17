@@ -77,7 +77,7 @@ if __name__ == "__main__":
     if pretrained:
         weights = attempt_download(weights)  # download if not found locally
         ckpt = torch.load(weights, map_location=device)  # load checkpoint
-        model = Model(cfg or ckpt['model'].yaml, ch=12, nc=nc, anchors=hyp.get('anchors')).to(device)  # create
+        model = Model(cfg or ckpt['model'].yaml, ch=(12 if onnx_setting.export_onnx else 3), nc=nc, anchors=hyp.get('anchors')).to(device)  # create
         exclude = ['anchor'] if (cfg or hyp.get('anchors')) else []  # exclude keys
         csd = ckpt['ema' if ckpt['ema']!=None else 'model'].float().state_dict()  # checkpoint state_dict as FP32
         csd = intersect_dicts(csd, model.state_dict(), exclude=exclude)  # intersect
@@ -97,8 +97,10 @@ if __name__ == "__main__":
     # imgsz = 256
 # 
     import os
-    # dummy_input = torch.randn(1, 3, opt.imgsz, opt.imgsz, device='cpu')
-    dummy_input = torch.randn(1, 12, opt.imgsz // 2, opt.imgsz // 2, device='cpu')
+    if onnx_setting.export_onnx == False:
+        dummy_input = torch.randn(1, 3, opt.imgsz, opt.imgsz, device='cpu')
+    else:
+        dummy_input = torch.randn(1, 12, opt.imgsz // 2, opt.imgsz // 2, device='cpu')
     onnx_file_name = "{}_{}_{}.onnx".format(os.path.splitext(data_name)[0], os.path.splitext(cfg_name)[0], opt.imgsz)
     torch.onnx.export(model.to('cpu'), dummy_input, onnx_file_name, export_params=True, opset_version=11, do_constant_folding=True)
     print (onnx_file_name)
