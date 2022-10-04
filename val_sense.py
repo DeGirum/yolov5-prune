@@ -59,6 +59,7 @@ from utils.metrics import fitness
 from utils.plots import plot_evolve
 from utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, select_device, smart_DDP, smart_optimizer,
                                smart_resume, torch_distributed_zero_first)
+from collections import OrderedDict
 
 LOCAL_RANK = int(os.getenv('LOCAL_RANK', -1))  # https://pytorch.org/docs/stable/elastic/run.html
 RANK = int(os.getenv('RANK', -1))
@@ -132,24 +133,15 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
     dgPruner = DG_Pruner()
     model = dgPruner.swap_prunable_modules(model)
-    dgPruner.dump_sparsity_stat(model, epoch=0)
+    # dgPruner.dump_sparsity_stat(model, epoch=0)
     layer_names = dgPruner.get_prunable_module_names(model)
     sense_analyzer_dict = {}
-    sense_analyzer_dict['sense0'] = {'class': 'Linear', 'starting_sparsity':0.6, 'final_sparsity':0.95, 'step_size':0.05, 'layer_names':layer_names }
+    sense_analyzer_dict['sense0'] = {'class': 'Linear', 'starting_sparsity':0.7, 'final_sparsity':0.95, 'step_size':0.05, 'layer_names':layer_names }
 
     # dgPruner.sense_analyzers_from_file('DG_Prune/sense_efficientnet_es.json')
     dgPruner.sense_analyzers_from_dict(sense_analyzer_dict)
     dgPruner.add_custom_pruning(model, MagnitudeImportance)
     #
-
-    # Freeze
-    freeze = [f'model.{x}.' for x in (freeze if len(freeze) > 1 else range(freeze[0]))]  # layers to freeze
-    for k, v in model.named_parameters():
-        v.requires_grad = True  # train all layers
-        # v.register_hook(lambda x: torch.nan_to_num(x))  # NaN to 0 (commented for erratic training results)
-        if any(x in k for x in freeze):
-            LOGGER.info(f'freezing {k}')
-            v.requires_grad = False
 
     # Image size
     gs = max(int(model.stride.max()), 32)  # grid size (max stride)
@@ -220,14 +212,15 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                                         batch_size=batch_size // WORLD_SIZE * 2,
                                         imgsz=imgsz,
                                         half=amp,
-                                        model=ema.ema,
+                                        model=model,
                                         single_cls=single_cls,
                                         dataloader=val_loader,
                                         save_dir=save_dir,
                                         plots=False,
                                         callbacks=callbacks,
                                         )
-            dgPruner.update_summary(results, os.path.join(save_dir, 'summary.csv'), write_header=write_header)
+            eval_results = OrderedDict( P=results[0], R=results[1], mAP0p5=results[2], mAP0p50p95=results[3] )
+            dgPruner.update_summary(eval_results, os.path.join(save_dir, 'summary.csv'), write_header=write_header)
             write_header = False
             dgPruner.apply_sensitivity_step()
         
