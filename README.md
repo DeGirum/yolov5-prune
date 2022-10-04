@@ -68,7 +68,7 @@ See the [YOLOv5 Docs](https://docs.ultralytics.com) for full documentation on tr
 <!-- $ sudo apt update && apt install -y libgl1-mesa-glx libsm6 libxext6 libxrender-dev -->
 
 ```bash
-$ git clone https://github.com/ultralytics/yolov5
+$ git clone https://github.com/DeGirum/yolov5.git
 $ cd yolov5
 $ pip install -r requirements.txt
 $ python train.py --batch 64 --cfg dg_yolov5s_relu6.yaml --data dataset.yaml --weights "" --epoch 100 --adam --img 512
