@@ -105,6 +105,6 @@ if __name__ == "__main__":
                         single_cls=False,
                         dataloader=val_loader,
                         save_dir=save_dir,
-                        save_json=True,
-                        plots=False
+                        save_json=False,
+                        plots=True
                         )

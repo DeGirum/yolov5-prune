@@ -181,24 +181,22 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
     start_epoch, best_fitness = 0, 0.0
     if pretrained:
         # Optimizer
-        # Mehrdad: do no load optimizer
-        # if ckpt['optimizer'] is not None:
-        #     optimizer.load_state_dict(ckpt['optimizer'])
-        #     best_fitness = ckpt['best_fitness']
+        if ckpt['optimizer'] is not None:
+            optimizer.load_state_dict(ckpt['optimizer'])
+            best_fitness = ckpt['best_fitness']
 
         # EMA
-        # if ema and ckpt.get('ema'):
-        #     ema.ema.load_state_dict(ckpt['ema'].float().state_dict())
-        #     ema.updates = ckpt['updates']
+        if ema and ckpt.get('ema'):
+            ema.ema.load_state_dict(ckpt['ema'].float().state_dict())
+            ema.updates = ckpt['updates']
 
-        # # Epochs
-        start_epoch = dgPruner.rewind_epoch(epochs)
-        # start_epoch = ckpt['epoch'] + 1
-        # if resume:
-        #     assert start_epoch > 0, f'{weights} training to {epochs} epochs is finished, nothing to resume.'
-        # if epochs < start_epoch:
-        #     LOGGER.info(f"{weights} has been trained for {ckpt['epoch']} epochs. Fine-tuning for {epochs} more epochs.")
-        #     epochs += ckpt['epoch']  # finetune additional epochs
+        # Epochs
+        start_epoch = ckpt['epoch'] + 1
+        if resume:
+            assert start_epoch > 0, f'{weights} training to {epochs} epochs is finished, nothing to resume.'
+        if epochs < start_epoch:
+            LOGGER.info(f"{weights} has been trained for {ckpt['epoch']} epochs. Fine-tuning for {epochs} more epochs.")
+            epochs += ckpt['epoch']  # finetune additional epochs
 
         del ckpt, csd
 
@@ -279,26 +277,20 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                 f"Logging results to {colorstr('bold', save_dir)}\n"
                 f'Starting training for {epochs} epochs...')
 
-    # Mehrdad
-    if pretrained:
-        dgPruner.prune_n_reset( -1 )
-        dgPruner.dump_sparsity_stat_mask_base(model, save_dir, -1)
-        dgPruner.apply_mask_to_weight()
-
 
     lth_epoch = start_epoch - 1
     for lth_stage in range(-1, dgPruner.num_stages() + 1):
-        if (lth_stage != 0):
+        if (lth_stage > 0):
             rewind_checkpoint = dgPruner.rewind_masked_checkpoint('model', 'model')
             if ema:
                 rewind_checkpoint = dgPruner.rewind_masked_checkpoint('ema', 'model')
 
-            final_checkpoint = dgPruner.get_final_checkpoint()
-            if ema:
-                final_checkpoint['ema'] = dgPruner.mask_unmasked_checkpoint(final_checkpoint['ema'], final_checkpoint['model'])
+            # final_checkpoint = dgPruner.get_final_checkpoint()
+            # if ema:
+            #     final_checkpoint['ema'] = dgPruner.mask_unmasked_checkpoint(final_checkpoint['ema'], final_checkpoint['model'])
 
             # loading model 
-            de_parallel(model).load_state_dict(final_checkpoint['model'], strict=False)  # load
+            de_parallel(model).load_state_dict(rewind_checkpoint['model'], strict=False)  # load
             # loading optimizer 
             optimizer.load_state_dict(rewind_checkpoint['optimizer'])
             scheduler.load_state_dict(rewind_checkpoint['scheduler'])
@@ -308,7 +300,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
             dgPruner.dump_sparsity_stat_mask_base(de_parallel(model), save_dir, lth_stage * 10000)
             # model ema 
             if ema:
-                ema.ema.load_state_dict(final_checkpoint['ema'])
+                ema.ema.load_state_dict(rewind_checkpoint['ema'])
                 ema.updates = 0 # checkpoint['updates']
                 dgPruner.dump_sparsity_stat_mask_base(ema.ema, save_dir, lth_stage * 100000)
         if ema:
@@ -461,7 +453,10 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
 
             # Mehrdad: LTH, pruning in the end
             if (epoch + 1 == epochs):
-                dgPruner.prune_n_reset( epoch )
+                if (lth_stage == -1):
+                    dgPruner.prune_n_reset( -1 )
+                else:
+                    dgPruner.prune_n_reset( epoch )
                 dgPruner.dump_sparsity_stat_mask_base(model, save_dir, lth_epoch)
                 dgPruner.apply_mask_to_weight()
 
@@ -476,7 +471,7 @@ def train(hyp,  # path/to/hyp.yaml or hyp dictionary
                         }
 
             # Save checkpoints
-            if (lth_stage == 0) and (epoch == dgPruner.rewind_epoch(epochs)):
+            if (lth_stage == -1) and (epoch == dgPruner.rewind_epoch(epochs)):
                 LOGGER.info('save rewind checkpoint\n')
                 dgPruner.save_rewind_checkpoint(checkpoint)
             if (epoch + 1 == epochs):

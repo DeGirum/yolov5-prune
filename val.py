@@ -149,7 +149,7 @@ def run(data,
             model(torch.zeros(1, 3, imgsz, imgsz).to(device).type_as(next(model.parameters())))  # run once
         pad = 0.0 if task == 'speed' else 0.5
         task = task if task in ('train', 'val', 'test') else 'val'  # path to train/val/test images
-        dataloader = create_dataloader(data[task], imgsz, batch_size, gs, single_cls, pad=pad, rect=True,
+        dataloader = create_dataloader(data[task], imgsz, batch_size, gs, single_cls, pad=pad, rect=False,
                                        prefix=colorstr(f'{task}: '))[0]
 
     seen = 0
@@ -172,6 +172,8 @@ def run(data,
 
         # Run model
         out, train_out = model(img, augment=augment)  # inference and training outputs
+        # np.save('test_out.npy', out.detach().cpu().numpy())
+        # np.save('test_in.npy', img.detach().cpu().numpy())
         dt[1] += time_sync() - t2
 
         # Compute loss
@@ -258,6 +260,7 @@ def run(data,
     # Plots
     if plots:
         confusion_matrix.plot(save_dir=save_dir, names=list(names.values()))
+        confusion_matrix.print()
         callbacks.run('on_val_end')
 
     # Save JSON
