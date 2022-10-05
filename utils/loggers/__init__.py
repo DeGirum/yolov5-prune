@@ -310,7 +310,7 @@ class Loggers():
     def on_eval_sense_step(self, results):
         if self.wandb:
             self.wandb.log(results)
-            self.wandb.finish_run()
+            # self.wandb.finish_run()
 
 class GenericLogger:
     """
