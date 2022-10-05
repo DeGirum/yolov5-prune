@@ -310,6 +310,7 @@ class Loggers():
     def on_eval_sense_step(self, results):
         if self.wandb:
             self.wandb.log(results)
+            self.wandb.end_epoch()
             # self.wandb.finish_run()
 
 class GenericLogger:
