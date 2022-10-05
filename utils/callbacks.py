@@ -32,6 +32,7 @@ class Callbacks:
             'on_model_save': [],
             'on_train_end': [],
             'on_params_update': [],
+            'on_eval_sense_step': [],
             'teardown': [],}
         self.stop_training = False  # set True to interrupt training
 
