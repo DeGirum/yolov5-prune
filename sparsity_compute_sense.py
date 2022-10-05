@@ -39,4 +39,4 @@ for layerName in layer_sense.keys():
 from DG_Prune.utils import dump_json
 
 dump_json( pruning_dict, 'sense{}.json'.format( int(ThrPerc*100) ) )
-a = 3
+

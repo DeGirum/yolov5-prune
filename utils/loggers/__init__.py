@@ -307,6 +307,10 @@ class Loggers():
         if self.comet_logger:
             self.comet_logger.on_params_update(params)
 
+    def on_eval_sense_step(self, results):
+        if self.wandb:
+            self.wandb.log(results)
+            self.wandb.finish_run()
 
 class GenericLogger:
     """

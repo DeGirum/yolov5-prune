@@ -220,10 +220,10 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                                         callbacks=callbacks,
                                         )
             eval_results = OrderedDict( P=results[0], R=results[1], mAP0p5=results[2], mAP0p50p95=results[3] )
-            dgPruner.update_summary(eval_results, os.path.join(save_dir, 'summary.csv'), write_header=write_header)
+            all_results = dgPruner.update_summary(eval_results, os.path.join(save_dir, 'summary.csv'), write_header=write_header)
             write_header = False
             dgPruner.apply_sensitivity_step()
-        
+            callbacks.run('on_eval_sense_step', all_results)
 
 
         # end epoch ----------------------------------------------------------------------------------------------------
