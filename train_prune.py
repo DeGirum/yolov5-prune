@@ -270,7 +270,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
 
     # Mehrdad
     lth_epoch = start_epoch - 1
-    for lth_stage in range(0, dgPruner.num_stages() + 1):
+    for lth_stage in range(0, dgPruner.num_stages() + 1 + 1): # extra stage just for retraining
         if (lth_stage != 0):
             
             rewind_checkpoint = dgPruner.rewind_masked_checkpoint('model', 'model')
@@ -292,7 +292,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
             dgPruner.dump_sparsity_stat_mask_base(de_parallel(model), save_dir, lth_stage * 10000)
             # model ema 
             if ema:
-                ema.ema.load_state_dict(final_checkpoint['ema'])
+                with torch.inference_mode():
+                    ema.ema.load_state_dict( final_checkpoint['ema'] )
                 ema.updates = 0 # checkpoint['updates']
                 dgPruner.dump_sparsity_stat_mask_base(ema.ema, save_dir, lth_stage * 100000)
                 # valuation after pruning
@@ -403,7 +404,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                                                     batch_size=batch_size // WORLD_SIZE * 2,
                                                     imgsz=imgsz,
                                                     half=amp,
-                                                    model=ema.ema,
+                                                    model=dgPruner.strip_prunable_modules(ema.ema),
                                                     single_cls=single_cls,
                                                     dataloader=val_loader,
                                                     save_dir=save_dir,
@@ -425,6 +426,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                             'best_fitness': best_fitness,
                             'model': deepcopy( dgPruner.strip_prunable_modules( de_parallel(model) ) ).half(),
                             'ema': deepcopy( dgPruner.strip_prunable_modules(ema.ema) ).half(),
+                            # 'model': deepcopy(de_parallel(model)).half(),
+                            # 'ema': deepcopy(ema.ema).half(),
                             'updates': ema.updates,
                             'optimizer': optimizer.state_dict(),
                             'wandb_id': loggers.wandb.wandb_run.id if loggers.wandb else None,
@@ -442,7 +445,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                     del ckpt
                     callbacks.run('on_model_save', last, lth_epoch, final_epoch, best_fitness, fi)
             # Mehrdad: LTH, pruning in the end
-            if (epoch + 1 == epochs):
+            if (epoch + 1 == epochs and lth_stage < dgPruner.num_stages() + 1 ):
                 dgPruner.prune_n_reset( epoch )
                 dgPruner.dump_sparsity_stat_mask_base(model, save_dir, lth_epoch)
                 dgPruner.apply_mask_to_weight()
@@ -486,25 +489,25 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
         LOGGER.info(f'\n{epoch - start_epoch + 1} epochs completed in {(time.time() - t0) / 3600:.3f} hours.')
         for f in last, best:
             if f.exists():
-                strip_optimizer(f)  # strip optimizers
-                if f is best:
-                    LOGGER.info(f'\nValidating {f}...')
-                    results, _, _ = validate.run(
-                        data_dict,
-                        batch_size=batch_size // WORLD_SIZE * 2,
-                        imgsz=imgsz,
-                        model=attempt_load(f, device).half(),
-                        iou_thres=0.65 if is_coco else 0.60,  # best pycocotools at iou 0.65
-                        single_cls=single_cls,
-                        dataloader=val_loader,
-                        save_dir=save_dir,
-                        save_json=is_coco,
-                        verbose=True,
-                        plots=plots,
-                        callbacks=callbacks,
-                        compute_loss=compute_loss)  # val best model with plots
-                    if is_coco:
-                        callbacks.run('on_fit_epoch_end', list(mloss) + list(results) + lr, epoch, best_fitness, fi)
+                # strip_optimizer(f, str(f).replace('.pt', '_stripped.pt'))  # strip optimizers
+
+                LOGGER.info(f'\nValidating {f}...')
+                results, _, _ = validate.run(
+                    data_dict,
+                    batch_size=batch_size // WORLD_SIZE * 2,
+                    imgsz=imgsz,
+                    model=attempt_load(f, device, fuse=False).half(),
+                    iou_thres=0.65 if is_coco else 0.60,  # best pycocotools at iou 0.65
+                    single_cls=single_cls,
+                    dataloader=val_loader,
+                    save_dir=save_dir,
+                    save_json=is_coco,
+                    verbose=True,
+                    plots=plots,
+                    callbacks=callbacks,
+                    compute_loss=compute_loss)  # val best model with plots
+                if is_coco and f is best:
+                    callbacks.run('on_fit_epoch_end', list(mloss) + list(results) + lr, epoch, best_fitness, fi)
 
         callbacks.run('on_train_end', last, best, epoch, results)
 
