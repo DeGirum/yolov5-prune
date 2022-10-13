@@ -136,7 +136,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
     # dgPruner.dump_sparsity_stat(model, epoch=0)
     layer_names = dgPruner.get_prunable_module_names(model)
     sense_analyzer_dict = {}
-    sense_analyzer_dict['sense0'] = {'class': 'Linear', 'starting_sparsity':0.7, 'final_sparsity':0.95, 'step_size':0.05, 'layer_names':layer_names }
+    sense_analyzer_dict['sense0'] = {'class': 'Linear', 'starting_sparsity':0.7, 'final_sparsity':0.90, 'step_size':0.05, 'layer_names':layer_names }
 
     # dgPruner.sense_analyzers_from_file('DG_Prune/sense_efficientnet_es.json')
     dgPruner.sense_analyzers_from_dict(sense_analyzer_dict)
