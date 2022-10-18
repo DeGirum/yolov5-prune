@@ -424,8 +424,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                 if (not nosave) or (final_epoch and not evolve):  # if save
                     ckpt = {'epoch': epoch,
                             'best_fitness': best_fitness,
-                            'model': deepcopy( dgPruner.strip_prunable_modules( de_parallel(model) ) ).half(),
-                            'ema': deepcopy( dgPruner.strip_prunable_modules(ema.ema) ).half(),
+                            'model': dgPruner.strip_prunable_modules( de_parallel(model) ),
+                            'ema': dgPruner.strip_prunable_modules(ema.ema),
                             # 'model': deepcopy(de_parallel(model)).half(),
                             # 'ema': deepcopy(ema.ema).half(),
                             'updates': ema.updates,
@@ -445,7 +445,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                     del ckpt
                     callbacks.run('on_model_save', last, lth_epoch, final_epoch, best_fitness, fi)
             # Mehrdad: LTH, pruning in the end
-            if (epoch + 1 == epochs and lth_stage < dgPruner.num_stages() + 1 ):
+            if (epoch + 1 == epochs and lth_stage < dgPruner.num_stages()):
                 dgPruner.prune_n_reset( epoch )
                 dgPruner.dump_sparsity_stat_mask_base(model, save_dir, lth_epoch)
                 dgPruner.apply_mask_to_weight()
@@ -496,8 +496,8 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                     data_dict,
                     batch_size=batch_size // WORLD_SIZE * 2,
                     imgsz=imgsz,
-                    model=attempt_load(f, device, fuse=False).half(),
-                    iou_thres=0.65 if is_coco else 0.60,  # best pycocotools at iou 0.65
+                    model=attempt_load(f, device),
+                    # iou_thres=0.65 if is_coco else 0.60,  # best pycocotools at iou 0.65
                     single_cls=single_cls,
                     dataloader=val_loader,
                     save_dir=save_dir,
@@ -505,7 +505,7 @@ def train(hyp, opt, device, callbacks):  # hyp is path/to/hyp.yaml or hyp dictio
                     verbose=True,
                     plots=plots,
                     callbacks=callbacks,
-                    compute_loss=compute_loss)  # val best model with plots
+                    compute_loss=compute_loss)  # val best model with plots 
                 if is_coco and f is best:
                     callbacks.run('on_fit_epoch_end', list(mloss) + list(results) + lr, epoch, best_fitness, fi)
 
