@@ -257,3 +257,5 @@ fabric.properties
 trained/*
 
 !data/*.yaml
+Sense_*/*
+YOLOv5_*/*
